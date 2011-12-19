@@ -1710,11 +1710,6 @@ void qpnp_hap_td_enable(int value)
 }
 EXPORT_SYMBOL(qpnp_hap_td_enable);
 
-void set_vibrate(int value)
-{
-	qpnp_hap_td_enable(&ghap->timed_dev, value);
-}
-
 /* play pwm bytes */
 int qpnp_hap_play_byte(u8 data, bool on)
 {
