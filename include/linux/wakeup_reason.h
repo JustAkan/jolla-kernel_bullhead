@@ -19,6 +19,7 @@
 #define _LINUX_WAKEUP_REASON_H
 
 #include <linux/types.h>
+<<<<<<< HEAD
 #include <linux/completion.h>
 
 #define MAX_SUSPEND_ABORT_LEN 256
@@ -100,5 +101,11 @@ void log_base_wakeup_reason(int irq);
 void clear_wakeup_reasons(void);
 void log_suspend_abort_reason(const char *fmt, ...);
 int check_wakeup_reason(int irq);
+=======
+
+void log_wakeup_reason(int irq);
+const int* get_wakeup_reasons(size_t *len);
+void clear_wakeup_reasons(void);
+>>>>>>> 2821f5f... PM: wakeup_reason: add functions to query and clear wakeup reasons
 
 #endif /* _LINUX_WAKEUP_REASON_H */
