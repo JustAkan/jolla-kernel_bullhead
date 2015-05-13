@@ -2165,7 +2165,11 @@ scale_load_to_freq(u64 load, unsigned int src_freq, unsigned int dst_freq)
 	return div64_u64(load * (u64)src_freq, (u64)dst_freq);
 }
 
+<<<<<<< HEAD
 void sched_get_cpus_busy(unsigned long *busy, const struct cpumask *query_cpus)
+=======
+unsigned long sched_get_busy(int cpu)
+>>>>>>> 975db17... sched: report loads greater than 100% only during load alert notifications
 {
 	unsigned long flags;
 	struct rq *rq;
@@ -2184,6 +2188,7 @@ void sched_get_cpus_busy(unsigned long *busy, const struct cpumask *query_cpus)
 	 * current task may have been executing for a long time. Ensure
 	 * that the window stats are current by doing an update.
 	 */
+<<<<<<< HEAD
 	local_irq_save(flags);
 	for_each_cpu(cpu, query_cpus)
 		raw_spin_lock(&cpu_rq(cpu)->lock);
@@ -2192,6 +2197,40 @@ void sched_get_cpus_busy(unsigned long *busy, const struct cpumask *query_cpus)
 
 	for_each_cpu(cpu, query_cpus) {
 		rq = cpu_rq(cpu);
+=======
+	raw_spin_lock_irqsave(&rq->lock, flags);
+	update_task_ravg(rq->curr, rq, TASK_UPDATE, sched_clock(), 0);
+	load = rq->old_busy_time = rq->prev_runnable_sum;
+
+	/*
+	 * Scale load in reference to rq->max_possible_freq.
+	 *
+	 * Note that scale_load_to_cpu() scales load in reference to
+	 * rq->max_freq
+	 */
+	load = scale_load_to_cpu(load, cpu);
+
+	if (!rq->notifier_sent) {
+		u64 load_at_cur_freq;
+
+		load_at_cur_freq = scale_load_to_freq(load, rq->max_freq,
+								 rq->cur_freq);
+		if (load_at_cur_freq > sched_ravg_window)
+			load_at_cur_freq = sched_ravg_window;
+		load = scale_load_to_freq(load_at_cur_freq,
+					 rq->cur_freq, rq->max_possible_freq);
+	} else {
+		load = scale_load_to_freq(load, rq->max_freq,
+						 rq->max_possible_freq);
+		rq->notifier_sent = 0;
+	}
+
+	load = div64_u64(load, NSEC_PER_USEC);
+
+	raw_spin_unlock_irqrestore(&rq->lock, flags);
+
+	trace_sched_get_busy(cpu, load);
+>>>>>>> 975db17... sched: report loads greater than 100% only during load alert notifications
 
 		update_task_ravg(rq->curr, rq, TASK_UPDATE, sched_clock(), 0);
 		load[i] = rq->old_busy_time = rq->prev_runnable_sum;
