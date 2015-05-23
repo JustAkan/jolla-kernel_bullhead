@@ -25,11 +25,18 @@
 #define MAX(x,y)				(x > y ? x : y)
 #define MIN(x,y)				(x < y ? x : y)
 #define TABLE_SIZE				12
+<<<<<<< HEAD
 #define TABLE_NUM				6
 
 static DEFINE_PER_CPU(struct ex_cpu_dbs_info_s, ex_cpu_dbs_info);
 
 static DEFINE_PER_CPU(struct ex_dbs_tuners *, cached_tuners);
+=======
+
+static DEFINE_PER_CPU(struct ex_cpu_dbs_info_s, ex_cpu_dbs_info);
+
+static unsigned int up_threshold_level[2] __read_mostly = {95, 85};
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 
 static unsigned int up_threshold_level[2] __read_mostly = {95, 85};
  
@@ -41,6 +48,7 @@ static struct ex_governor_data {
 	.prev_load = 0,
 };
 
+<<<<<<< HEAD
 static unsigned int tblmap[TABLE_NUM][TABLE_SIZE] __read_mostly = {
 
 	//table 0
@@ -139,6 +147,51 @@ static unsigned int tblmap[TABLE_NUM][TABLE_SIZE] __read_mostly = {
 		1627200,
 	}
 
+=======
+static unsigned int tblmap1[TABLE_SIZE] __read_mostly = {
+	616400,
+	757200,
+	840000,
+	960000,
+	1248000,
+	1344000,
+	1478400,
+	1555200,
+	1632000,
+	1728000,
+	1824000,
+	1958400,
+};
+
+static unsigned int tblmap2[TABLE_SIZE] __read_mostly = {
+	773040,
+	899760,
+	1014960,
+	1072560,
+	1248000,
+	1344000,
+	1478400,
+	1555200,
+	1632000,
+	1728000,
+	1824000,
+	1958400,
+};
+
+static unsigned int tblmap3[TABLE_SIZE] __read_mostly = {
+	851100,
+	956700,
+	1052700,
+	1100700,
+	1350400,
+	1416000,
+	1550400,
+	1627200,
+	1740800,
+	1824000,
+	1920000,
+	2054400,
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 };
 
 static inline int get_cpu_freq_index(unsigned int freq, struct dbs_data *dbs_data)
@@ -197,20 +250,36 @@ static void ex_check_cpu(int cpu, unsigned int load)
 		}
 		
 		else if (avg_load > up_threshold_level[0]) {
+<<<<<<< HEAD
 			freq_next = tblmap[2 + ex_tuners->powersave][index];
 		}
 		
 		else if (avg_load <= up_threshold_level[1]) {
 			freq_next = tblmap[0 + ex_tuners->powersave][index];
+=======
+			freq_next = tblmap3[index];
+		}
+		
+		else if (avg_load <= up_threshold_level[1]) {
+			freq_next = tblmap1[index];
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 		}
 	
 		else {
 			if (load > up_threshold_level[0]) {
+<<<<<<< HEAD
 				freq_next = tblmap[2 + ex_tuners->powersave][index];
 			}
 		
 			else {
 				freq_next = tblmap[1 + ex_tuners->powersave][index];
+=======
+				freq_next = tblmap3[index];
+			}
+		
+			else {
+				freq_next = tblmap2[index];
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 			}
 		}
 
@@ -429,6 +498,7 @@ static struct attribute_group ex_attr_group_gov_pol = {
 
 /************************** sysfs end ************************/
 
+<<<<<<< HEAD
 static void save_tuners(struct cpufreq_policy *policy,
 			  struct ex_dbs_tuners *tuners)
 {
@@ -445,6 +515,9 @@ static void save_tuners(struct cpufreq_policy *policy,
 }
 
 static struct ex_dbs_tuners *alloc_tuners(struct cpufreq_policy *policy)
+=======
+static int ex_init(struct dbs_data *dbs_data, struct cpufreq_policy *policy)
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 {
 	struct ex_dbs_tuners *tuners;
 
@@ -500,7 +573,11 @@ static int ex_init(struct dbs_data *dbs_data, struct cpufreq_policy *policy)
 
 static void ex_exit(struct dbs_data *dbs_data)
 {
+<<<<<<< HEAD
 	//nothing to do
+=======
+	kfree(dbs_data->tuners);
+>>>>>>> fd201a0... cpufreq_elementalx: store freq_table per policy and add static reference tables
 }
 
 define_get_cpu_dbs_routines(ex_cpu_dbs_info);
