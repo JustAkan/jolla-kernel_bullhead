@@ -32,7 +32,68 @@
 
 #define DM_VERITY_OPT_LOGGING		"ignore_corruption"
 #define DM_VERITY_OPT_RESTART		"restart_on_corruption"
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 #define DM_VERITY_OPT_IGN_ZEROES	"ignore_zero_blocks"
+=======
+
+static unsigned dm_verity_prefetch_cluster = DM_VERITY_DEFAULT_PREFETCH_SIZE;
+
+module_param_named(prefetch_cluster, dm_verity_prefetch_cluster, uint, S_IRUGO | S_IWUSR);
+
+enum verity_mode {
+	DM_VERITY_MODE_EIO,
+	DM_VERITY_MODE_LOGGING,
+	DM_VERITY_MODE_RESTART
+};
+
+enum verity_block_type {
+	DM_VERITY_BLOCK_TYPE_DATA,
+	DM_VERITY_BLOCK_TYPE_METADATA
+};
+
+struct dm_verity {
+	struct dm_dev *data_dev;
+	struct dm_dev *hash_dev;
+	struct dm_target *ti;
+	struct dm_bufio_client *bufio;
+	char *alg_name;
+	struct crypto_shash *tfm;
+	u8 *root_digest;	/* digest of the root block */
+	u8 *salt;		/* salt: its size is salt_size */
+	unsigned salt_size;
+	sector_t data_start;	/* data offset in 512-byte sectors */
+	sector_t hash_start;	/* hash start in blocks */
+	sector_t data_blocks;	/* the number of data blocks */
+	sector_t hash_blocks;	/* the number of hash blocks */
+	unsigned char data_dev_block_bits;	/* log2(data blocksize) */
+	unsigned char hash_dev_block_bits;	/* log2(hash blocksize) */
+	unsigned char hash_per_block_bits;	/* log2(hashes in hash block) */
+	unsigned char levels;	/* the number of tree levels */
+	unsigned char version;
+	unsigned digest_size;	/* digest size for the current hash algorithm */
+	unsigned shash_descsize;/* the size of temporary space for crypto */
+	int hash_failed;	/* set to 1 if hash of any block failed */
+	enum verity_mode mode;	/* mode for handling verification errors */
+	unsigned corrupted_errs;/* Number of errors for corrupted blocks */
+
+	mempool_t *vec_mempool;	/* mempool of bio vector */
+
+	struct workqueue_struct *verify_wq;
+
+	/* starting blocks for each tree level. 0 is the lowest level. */
+	sector_t hash_level_block[DM_VERITY_MAX_LEVELS];
+};
+
+struct dm_verity_io {
+	struct dm_verity *v;
+
+	/* original values of bio->bi_end_io and bio->bi_private */
+	bio_end_io_t *orig_bi_end_io;
+	void *orig_bi_private;
+
+	sector_t block;
+	unsigned n_blocks;
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 
 #define DM_VERITY_OPTS_MAX		(2 + DM_VERITY_OPTS_FEC)
 
@@ -301,6 +362,7 @@ static int verity_verify_level(struct dm_verity *v, struct dm_verity_io *io,
 	memcpy(want_digest, data, v->digest_size);
 	r = 0;
 
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 release_ret_r:
 	dm_bufio_release(buf);
 	return r;
@@ -326,6 +388,22 @@ int verity_hash_for_block(struct dm_verity *v, struct dm_verity_io *io,
 		r = verity_verify_level(v, io, block, 0, true, digest);
 		if (likely(r <= 0))
 			goto out;
+=======
+		result = io_real_digest(v, io);
+		r = crypto_shash_final(desc, result);
+		if (r < 0) {
+			DMERR("crypto_shash_final failed: %d", r);
+			goto release_ret_r;
+		}
+		if (unlikely(memcmp(result, io_want_digest(v, io), v->digest_size))) {
+			if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_METADATA,
+					      hash_block)) {
+				r = -EIO;
+				goto release_ret_r;
+			}
+		} else
+			aux->hash_verified = 1;
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 	}
 
 	memcpy(digest, v->root_digest, v->digest_size);
@@ -441,8 +519,46 @@ static int verity_verify_io(struct dm_verity_io *io)
 		if (unlikely(r < 0))
 			return r;
 
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 		start_vector = vector;
 		start_offset = offset;
+=======
+		if (likely(v->version >= 1)) {
+			r = crypto_shash_update(desc, v->salt, v->salt_size);
+			if (r < 0) {
+				DMERR("crypto_shash_update failed: %d", r);
+				return r;
+			}
+		}
+
+		todo = 1 << v->data_dev_block_bits;
+		do {
+			struct bio_vec *bv;
+			u8 *page;
+			unsigned len;
+
+			BUG_ON(vector >= io->io_vec_size);
+			bv = &io->io_vec[vector];
+			page = kmap_atomic(bv->bv_page);
+			len = bv->bv_len - offset;
+			if (likely(len >= todo))
+				len = todo;
+			r = crypto_shash_update(desc,
+					page + bv->bv_offset + offset, len);
+			kunmap_atomic(page);
+
+			if (r < 0) {
+				DMERR("crypto_shash_update failed: %d", r);
+				return r;
+			}
+			offset += len;
+			if (likely(offset == bv->bv_len)) {
+				offset = 0;
+				vector++;
+			}
+			todo -= len;
+		} while (todo);
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 
 		r = verity_for_bv_block(v, io, &vector, &offset,
 					verity_bv_hash_update);
@@ -452,6 +568,7 @@ static int verity_verify_io(struct dm_verity_io *io)
 		r = verity_hash_final(v, desc, verity_io_real_digest(v, io));
 		if (unlikely(r < 0))
 			return r;
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 
 		if (likely(memcmp(verity_io_real_digest(v, io),
 				  verity_io_want_digest(v, io), v->digest_size) == 0))
@@ -462,6 +579,14 @@ static int verity_verify_io(struct dm_verity_io *io)
 		else if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_DATA,
 					   io->block + b))
 			return -EIO;
+=======
+		}
+		if (unlikely(memcmp(result, io_want_digest(v, io), v->digest_size))) {
+			if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_DATA,
+					      io->block + b))
+				return -EIO;
+		}
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 	}
 	BUG_ON(vector != io->io_vec_size);
 	BUG_ON(offset);
@@ -652,6 +777,7 @@ static void verity_status(struct dm_target *ti, status_type_t type,
 		else
 			for (x = 0; x < v->salt_size; x++)
 				DMEMIT("%02x", v->salt[x]);
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 		if (v->mode != DM_VERITY_MODE_EIO)
 			args++;
 		if (verity_fec_is_enabled(v))
@@ -663,6 +789,10 @@ static void verity_status(struct dm_target *ti, status_type_t type,
 		DMEMIT(" %u", args);
 		if (v->mode != DM_VERITY_MODE_EIO) {
 			DMEMIT(" ");
+=======
+		if (v->mode != DM_VERITY_MODE_EIO) {
+			DMEMIT(" 1 ");
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 			switch (v->mode) {
 			case DM_VERITY_MODE_LOGGING:
 				DMEMIT(DM_VERITY_OPT_LOGGING);
@@ -674,9 +804,12 @@ static void verity_status(struct dm_target *ti, status_type_t type,
 				BUG();
 			}
 		}
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 		if (v->zero_digest)
 			DMEMIT(" " DM_VERITY_OPT_IGN_ZEROES);
 		sz = verity_fec_status_table(v, sz, result, maxlen);
+=======
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 		break;
 	}
 }
@@ -865,12 +998,21 @@ static int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 {
 	struct dm_verity *v;
 	struct dm_arg_set as;
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 	unsigned int num;
+=======
+	const char *opt_string;
+	unsigned int num, opt_params;
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 	unsigned long long num_ll;
 	int r;
 	int i;
 	sector_t hash_position;
 	char dummy;
+
+	static struct dm_arg _args[] = {
+		{0, 1, "Invalid number of feature args"},
+	};
 
 	v = kzalloc(sizeof(struct dm_verity), GFP_KERNEL);
 	if (!v) {
@@ -1020,9 +1162,35 @@ static int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		as.argc = argc;
 		as.argv = argv;
 
+<<<<<<< HEAD:drivers/md/dm-verity-target.c
 		r = verity_parse_opt_args(&as, v);
 		if (r < 0)
 			goto bad;
+=======
+		r = dm_read_arg_group(_args, &as, &opt_params, &ti->error);
+		if (r)
+			goto bad;
+
+		while (opt_params) {
+			opt_params--;
+			opt_string = dm_shift_arg(&as);
+			if (!opt_string) {
+				ti->error = "Not enough feature arguments";
+				r = -EINVAL;
+				goto bad;
+			}
+
+			if (!strcasecmp(opt_string, DM_VERITY_OPT_LOGGING))
+				v->mode = DM_VERITY_MODE_LOGGING;
+			else if (!strcasecmp(opt_string, DM_VERITY_OPT_RESTART))
+				v->mode = DM_VERITY_MODE_RESTART;
+			else {
+				ti->error = "Invalid feature arguments";
+				r = -EINVAL;
+				goto bad;
+			}
+		}
+>>>>>>> 043805d... dm verity: port upstream changes to 3.10:drivers/md/dm-verity.c
 	}
 
 	v->hash_per_block_bits =
