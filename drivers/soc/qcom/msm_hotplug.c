@@ -572,6 +572,7 @@ static void msm_hotplug_suspend(void)
 
 	return;
 }
+EXPORT_SYMBOL(msm_hotplug_suspend);
 
 static void __ref msm_hotplug_resume(void)
 {
