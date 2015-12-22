@@ -4459,9 +4459,6 @@ static int synaptics_rmi4_regulator_lpm(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	pr_info("touch off\n");
-#ifdef CONFIG_MSM_HOTPLUG
-	msm_hotplug_suspend();
-#endif
 
 	return 0;
 
@@ -4512,9 +4509,6 @@ regulator_hpm:
 	}
 
 	pr_info("touch on\n");
-#ifdef CONFIG_MSM_HOTPLUG
-	msm_hotplug_resume();
-#endif
 
 	return 0;
 
