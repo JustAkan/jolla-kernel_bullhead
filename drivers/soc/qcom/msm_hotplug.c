@@ -33,6 +33,7 @@
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
 
+// Change this value for your device
 #define LITTLE_CORES	4
 #define BIG_CORES	2
 
