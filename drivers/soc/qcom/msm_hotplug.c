@@ -27,8 +27,6 @@
 #include <linux/math64.h>
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
-#include <linux/hrtimer.h>
-#include <asm-generic/cputime.h>
 
 // Change this value for your device
 #define LITTLE_CORES	4
@@ -47,15 +45,6 @@
 #define DEFAULT_MAX_CPUS_ONLINE		LITTLE_CORES
 #define DEFAULT_FAST_LANE_LOAD		99
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
-
-// Use for msm_hotplug_resume_timeout
-#define HOTPLUG_TIMEOUT			2000
-static bool timeout_enabled = false;
-static cputime64_t pre_time;
-bool msm_hotplug_scr_suspended = false;
-EXPORT_SYMBOL(msm_hotplug_scr_suspended);
-
-void msm_hotplug_suspend(void);
 
 static unsigned int debug = 0;
 module_param_named(debug_mask, debug, uint, 0644);
@@ -504,16 +493,6 @@ static void msm_hotplug_work(struct work_struct *work)
 		return;
 	}
 
-	if (timeout_enabled &&
-	    (ktime_to_ms(ktime_get()) - pre_time > HOTPLUG_TIMEOUT)) {
-		if (msm_hotplug_scr_suspended) {
-			msm_hotplug_suspend();
-			return;
-		}
-
-		timeout_enabled = false;
-	}
-
 	update_load_stats();
 
 	if (stats.cur_max_load >= hotplug.fast_lane_load) {
@@ -576,12 +555,8 @@ void msm_hotplug_suspend(void)
 		return;
 
 	/* Flush hotplug workqueue */
-	if (timeout_enabled)
-		timeout_enabled = false;
-	else {
-		flush_workqueue(hotplug_wq);
-		cancel_delayed_work_sync(&hotplug_work);
-	}
+	flush_workqueue(hotplug_wq);
+	cancel_delayed_work_sync(&hotplug_work);
 
 	/* Put all sibling cores to sleep */
 	for_each_online_cpu(cpu) {
@@ -633,17 +608,6 @@ void msm_hotplug_resume(void)
 	return;
 }
 EXPORT_SYMBOL(msm_hotplug_resume);
-
-void msm_hotplug_resume_timeout(void)
-{
-	if (timeout_enabled || !hotplug.suspended)
-		return;
-
-	timeout_enabled = true;
-	pre_time = ktime_to_ms(ktime_get());
-	msm_hotplug_resume();
-}
-EXPORT_SYMBOL(msm_hotplug_resume_timeout);
 
 static void hotplug_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)

@@ -123,7 +123,6 @@ enum device_status {
 #define F12_MAX_Y		65536
 
 #ifdef CONFIG_MSM_HOTPLUG
-extern bool msm_hotplug_scr_suspended;
 extern void msm_hotplug_suspend(void);
 extern void msm_hotplug_resume(void);
 #endif
@@ -4602,7 +4601,6 @@ static int synaptics_rmi4_suspend(struct device *dev)
 	int retval;
 
 #ifdef CONFIG_MSM_HOTPLUG
-	msm_hotplug_scr_suspended = true;
 	msm_hotplug_suspend();
 #endif
 
@@ -4713,7 +4711,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 
 #ifdef CONFIG_MSM_HOTPLUG
-	msm_hotplug_scr_suspended = false;
 	msm_hotplug_resume();
 #endif
 
