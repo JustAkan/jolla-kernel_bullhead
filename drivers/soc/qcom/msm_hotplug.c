@@ -342,6 +342,7 @@ static void __ref cpu_up_work(struct work_struct *work)
 {
 	int cpu;
 	unsigned int target_little, target_big;
+	unsigned int online_little;
 
 	target_little = hotplug.target_cpus;
 
@@ -355,9 +356,11 @@ static void __ref cpu_up_work(struct work_struct *work)
 		apply_down_lock(cpu);
 	}
 
-	if (target_little >= LITTLE_CORES - 1)
+	online_little = num_online_little_cpus();
+
+	if (online_little >= LITTLE_CORES - 1)
 		target_big = BIG_CORES;
-	else if (target_little >= LITTLE_CORES / 2)
+	else if (online_little >= LITTLE_CORES / 2)
 		target_big = BIG_CORES / 2;
 	else
 		return;
@@ -376,6 +379,7 @@ static void cpu_down_work(struct work_struct *work)
 {
 	int cpu, lowest_cpu;
 	unsigned int target_little, target_big;
+	unsigned int online_little;
 
 	target_little = hotplug.target_cpus;
 
@@ -393,9 +397,11 @@ static void cpu_down_work(struct work_struct *work)
 			break;
 	}
 
-	if (target_little >= LITTLE_CORES - 1)
+	online_little = num_online_little_cpus();
+
+	if (online_little >= LITTLE_CORES - 1)
 		target_big = BIG_CORES;
-	else if (target_little >= LITTLE_CORES / 2)
+	else if (online_little >= LITTLE_CORES / 2)
 		target_big = BIG_CORES / 2;
 	else
 		return;
@@ -561,6 +567,10 @@ static void msm_hotplug_suspend(void)
 			continue;
 		cpu_down(cpu);
 	}
+
+	pr_info("%s: suspended.\n", MSM_HOTPLUG);
+
+	return;
 }
 
 static void __ref msm_hotplug_resume(void)
@@ -594,6 +604,10 @@ static void __ref msm_hotplug_resume(void)
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule)
 		reschedule_hotplug_work();
+
+	pr_info("%s: resumed.\n", MSM_HOTPLUG);
+
+	return;
 }
 
 static int state_notifier_callback(struct notifier_block *this,
