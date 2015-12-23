@@ -122,11 +122,6 @@ enum device_status {
 #define F12_MAX_X		65536
 #define F12_MAX_Y		65536
 
-#ifdef CONFIG_MSM_HOTPLUG
-extern void msm_hotplug_suspend(void);
-extern void msm_hotplug_resume(void);
-#endif
-
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data,
 		unsigned short length);

@@ -28,7 +28,6 @@
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
 
-// Change this value for your device
 #define LITTLE_CORES	4
 #define BIG_CORES	2
 
@@ -54,6 +53,10 @@ do { 				\
 	if (debug)		\
 		pr_info(msg);	\
 } while (0)
+
+#ifdef CONFIG_FB
+static struct notifier_block notif;
+#endif
 
 static struct cpu_hotplug {
 	unsigned int msm_enabled;
@@ -538,7 +541,8 @@ reschedule:
 	reschedule_hotplug_work();
 }
 
-void msm_hotplug_suspend(void)
+#ifdef CONFIG_FB
+static void msm_hotplug_suspend(void)
 {
 	int cpu;
 
@@ -569,9 +573,8 @@ void msm_hotplug_suspend(void)
 
 	return;
 }
-EXPORT_SYMBOL(msm_hotplug_suspend);
 
-void msm_hotplug_resume(void)
+static void msm_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
@@ -607,7 +610,26 @@ void msm_hotplug_resume(void)
 
 	return;
 }
-EXPORT_SYMBOL(msm_hotplug_resume);
+
+
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		blank = evdata->data;
+		if ((*blank == FB_BLANK_UNBLANK) ||
+		    (*blank == FB_BLANK_VSYNC_SUSPEND))
+			msm_hotplug_resume();
+		else if (*blank == FB_BLANK_POWERDOWN)
+			msm_hotplug_suspend();
+	}
+
+	return 0;
+}
+#endif
 
 static void hotplug_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
@@ -727,6 +749,16 @@ static int __ref msm_hotplug_start(void)
 		ret = -ENOMEM;
 		goto err_dev;
 	}
+
+#ifdef CONFIG_FB
+	notif.notifier_call = fb_notifier_callback;
+
+	ret = fb_register_client(&notif);
+	if (ret) {
+		pr_err("%s: Failed to register fb_notifier: %d\n",
+		       MSM_HOTPLUG, ret);
+	}
+#endif
 
 	mutex_init(&stats.stats_mutex);
 	mutex_init(&hotplug.msm_hotplug_mutex);
