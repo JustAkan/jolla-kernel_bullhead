@@ -370,7 +370,7 @@ static void __ref cpu_up_work(struct work_struct *work)
 
 	online_little = num_online_little_cpus();
 
-	if (online_little >= LITTLE_CORES / 3)
+	if (online_little >= LITTLE_CORES / 4)
 		target_big = BIG_CORES;
 	else if (online_little >= LITTLE_CORES / 2)
 		target_big = BIG_CORES / 2;
@@ -411,9 +411,9 @@ static void cpu_down_work(struct work_struct *work)
 
 	online_little = num_online_little_cpus();
 
-	if (online_little <= LITTLE_CORES / 2)
+	if (online_little <= LITTLE_CORES / 3)
 		target_big = BIG_CORES;
-	else if (online_little <= LITTLE_CORES / 3)
+	else if (online_little <= LITTLE_CORES / 4)
 		target_big = BIG_CORES / 2;
 	else
 		return;
@@ -563,7 +563,7 @@ reschedule:
 }
 
 #ifdef CONFIG_STATE_NOTIFIER
-static void msm_hotplug_suspend(void)
+void msm_hotplug_suspend(void)
 {
 	int cpu;
 
@@ -600,7 +600,7 @@ static void msm_hotplug_suspend(void)
 }
 EXPORT_SYMBOL(msm_hotplug_suspend);
 
-static void __ref msm_hotplug_resume(void)
+void msm_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
