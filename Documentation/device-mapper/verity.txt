@@ -73,7 +73,6 @@ Construction Parameters
 
 ignore_corruption
     Log corrupted blocks, but allow read operations to proceed normally.
-<<<<<<< HEAD
 
 restart_on_corruption
     Restart the system when a corrupted block is discovered. This option is
@@ -108,13 +107,7 @@ fec_blocks
 fec_start
     This is the offset, in <data_block_size> blocks, from the start of the
     FEC device to the beginning of the encoding data.
-=======
->>>>>>> 043805d... dm verity: port upstream changes to 3.10
 
-restart_on_corruption
-    Restart the system when a corrupted block is discovered. This option is
-    not compatible with ignore_corruption and requires user space support to
-    avoid restart loops.
 
 Theory of operation
 ===================
